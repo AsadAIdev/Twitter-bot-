@@ -1,0 +1,37 @@
+name: AI Twitter Bot
+
+on:
+  schedule:
+    # Runs every 4 hours (edit the cron to change frequency)
+    - cron: "0 */4 * * *"
+  workflow_dispatch: {}   # lets you trigger it manually from GitHub UI
+
+jobs:
+  tweet:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run bot
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          UPLOAD_POST_API_KEY: ${{ secrets.UPLOAD_POST_API_KEY }}
+          UPLOAD_POST_USER: ${{ secrets.UPLOAD_POST_USER }}
+        run: python bot.py
+
+      - name: Commit updated history
+        run: |
+          git config user.name "tweet-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add tweet_history.json bot.log || true
+          git diff --staged --quiet || git commit -m "chore: update tweet history [skip ci]"
+          git push || true
